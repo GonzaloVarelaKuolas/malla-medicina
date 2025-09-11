@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
+  Check,
 } from "lucide-react"
 import { useLanguage } from "@/hooks/use-language"
 import ElectiveRecommendations from "@/app/components/elective-recommendations"
@@ -78,6 +79,71 @@ interface ElectivesManagerProps {
   onUpdateCustomElectives: (electives: ElectiveOption[]) => void
 }
 
+// Medical specialty areas from the provided list
+const MEDICAL_SPECIALTY_AREAS = [
+  "ADMINISTRACIÓN DE SERVICIOS DE SALUD",
+  "ALERGOLOGÍA",
+  "ANATOMÍA PATOLÓGICA",
+  "ANESTESIOLOGÍA",
+  "ANGIOLOGÍA Y CIRUGÍA VASCULAR",
+  "CARDIOLOGÍA PEDIÁTRICA",
+  "CARDIOLOGÍA",
+  "CIRUGÍA CARDÍACA",
+  "CIRUGÍA GENERAL",
+  "CIRUGÍA PEDIÁTRICA",
+  "CIRUGÍA PLÁSTICA",
+  "CIRUGÍA TORÁCICA",
+  "DERMATOLOGÍA MÉDICO - QUIRÚRGICA",
+  "EMERGENTOLOGÍA PEDIÁTRICA",
+  "ENDOCRINOLOGÍA Y METABOLISMO",
+  "ENFERMEDADES INFECCIOSAS",
+  "EPIDEMIOLOGÍA",
+  "NEUROLOGÍA",
+  "EMERGENTOLOGÍA",
+  "FISIOTERAPIA EN CUIDADOS CRÍTICOS",
+  "MEDICINA DE LA ADOLESCENCIA",
+  "FARMACOLOGÍA Y TERAPÉUTICA",
+  "GASTROENTEROLOGÍA, HEPATOLOGÍA Y NUTRICIÓN PEDIÁTRICA",
+  "GASTROENTEROLOGÍA",
+  "GERIATRÍA",
+  "GERONTOPSICOMOTRICIDAD",
+  "GINECOTOCOLOGÍA",
+  "HEMATOLOGÍA",
+  "HEMOTERAPIA Y MEDICINA TRANSFUSIONAL",
+  "IMAGENOLOGÍA",
+  "LABORATORIO DE PATOLOGÍA CLÍNICA",
+  "MEDICINA DEL DEPORTE",
+  "MEDICINA FAMILIAR Y COMUNITARIA",
+  "MEDICINA INTENSIVA",
+  "MEDICINA INTERNA",
+  "MEDICINA INTERVENCIONISTA DEL DOLOR",
+  "MEDICINA LEGAL",
+  "MEDICINA NUCLEAR",
+  "MICROBIOLOGÍA",
+  "NEFROLOGÍA PEDIÁTRICA",
+  "NEFROLOGÍA",
+  "NEONATOLOGÍA",
+  "NEUMOLOGÍA PEDIÁTRICA",
+  "NEUMOLOGÍA",
+  "NEUROCIRUGÍA",
+  "NEUROPEDIATRIA",
+  "OFTALMOLOGÍA",
+  "ONCOLOGÍA MÉDICA",
+  "ONCOLOGÍA RADIOTERÁPICA",
+  "OTORRINOLARINGOLOGÍA",
+  "PARASITOLOGÍA Y MICOLOGÍA MÉDICA",
+  "PEDIATRÍA",
+  "PSIQUIATRÍA PEDIÁTRICA",
+  "PSIQUIATRÍA",
+  "REHABILITACIÓN Y MEDICINA FÍSICA",
+  "REUMATOLOGÍA",
+  "SALUD OCUPACIONAL",
+  "TERAPIA INTENSIVA PEDIÁTRICA",
+  "TOXICOLOGÍA CLÍNICA",
+  "TRAUMATOLOGÍA Y ORTOPEDIA",
+  "UROLOGÍA",
+]
+
 // Additional elective assignments that are part of the curriculum options
 const ADDITIONAL_ELECTIVES: ElectiveOption[] = [
   {
@@ -88,7 +154,7 @@ const ADDITIONAL_ELECTIVES: ElectiveOption[] = [
     dependencies: [],
     requiresFullYear: [1, 2, 3],
     description: "Fundamentos científicos de la patología médica - Primera parte",
-    area: "Ciencias Básicas Clínicas",
+    area: "ANATOMÍA PATOLÓGICA",
     skills: ["pathology", "clinical_diagnosis", "medical_science"],
     careerRelevance: {
       internal_medicine: 85,
@@ -112,7 +178,7 @@ const ADDITIONAL_ELECTIVES: ElectiveOption[] = [
     dependencies: [],
     requiresFullYear: [1, 2, 3],
     description: "Fundamentos científicos de la patología médica - Segunda parte",
-    area: "Ciencias Básicas Clínicas",
+    area: "ANATOMÍA PATOLÓGICA",
     skills: ["pathology", "clinical_diagnosis", "advanced_diagnostics"],
     careerRelevance: {
       internal_medicine: 85,
@@ -136,7 +202,7 @@ const ADDITIONAL_ELECTIVES: ElectiveOption[] = [
     dependencies: [],
     requiresFullYear: [1, 2, 3],
     description: "Introducción a la medicina comunitaria y salud pública",
-    area: "Medicina Comunitaria",
+    area: "MEDICINA FAMILIAR Y COMUNITARIA",
     skills: ["community_health", "public_health", "epidemiology"],
     careerRelevance: {
       public_health: 95,
@@ -159,7 +225,7 @@ const ADDITIONAL_ELECTIVES: ElectiveOption[] = [
     dependencies: [],
     requiresFullYear: [1, 2, 3],
     description: "Práctica de laboratorio en medicina de primer nivel de atención",
-    area: "Medicina Comunitaria",
+    area: "MEDICINA FAMILIAR Y COMUNITARIA",
     skills: ["primary_care", "laboratory_skills", "patient_management"],
     careerRelevance: {
       family_medicine: 90,
@@ -183,7 +249,7 @@ export function ElectivesManager({
   onUpdateCustomElectives,
 }: ElectivesManagerProps) {
   const { t } = useLanguage()
-  const [activeTab, setActiveTab] = useState("recommendations")
+  const [activeTab, setActiveTab] = useState("catalog") // Changed default to catalog
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedArea, setSelectedArea] = useState<string>("all")
   const [selectedCareer, setSelectedCareer] = useState<string>("all")
@@ -199,6 +265,8 @@ export function ElectivesManager({
     area: "",
   })
 
+  // Get IDs of selected electives
+  const selectedElectiveIds = new Set(assignments.map((a) => a.id))
   const completedAssignments = new Set(assignments.filter((a) => a.completed).map((a) => a.id))
 
   // Combine all electives: medicine electives + additional electives + custom electives
@@ -221,10 +289,7 @@ export function ElectivesManager({
       prerequisitesMet = elective.dependencies.every((dep) => completedAssignments.has(dep))
     }
 
-    // Check if not already in assignments
-    const notInAssignments = !assignments.some((a) => a.id === elective.id)
-
-    return prerequisitesMet && notInAssignments
+    return prerequisitesMet
   })
 
   const filteredElectives = availableElectives.filter((elective) => {
@@ -235,6 +300,7 @@ export function ElectivesManager({
     return matchesSearch && matchesArea
   })
 
+  // Get unique areas from all electives
   const areas = Array.from(new Set(allElectives.map((e) => e.area).filter(Boolean)))
 
   const handleSelectElective = (elective: ElectiveOption, semester: number, selectedYear?: number) => {
@@ -380,30 +446,19 @@ export function ElectivesManager({
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="recommendations" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Recomendaciones IA
-          </TabsTrigger>
           <TabsTrigger value="catalog" className="flex items-center gap-2">
             <BookOpen className="w-4 h-4" />
             Catálogo Completo
+          </TabsTrigger>
+          <TabsTrigger value="recommendations" className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" />
+            Recomendaciones IA
           </TabsTrigger>
           <TabsTrigger value="custom" className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             Crear Optativa
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="recommendations" className="space-y-6">
-          <ElectiveRecommendations
-            assignments={assignments}
-            completedAssignments={completedAssignments}
-            availableElectives={allElectives}
-            career={selectedCareer}
-            maxYear={7}
-            onSelectElective={handleSelectElective}
-          />
-        </TabsContent>
 
         <TabsContent value="catalog" className="space-y-6">
           {/* Search and Filters */}
@@ -428,7 +483,7 @@ export function ElectivesManager({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas las áreas</SelectItem>
-                      {areas.map((area) => (
+                      {MEDICAL_SPECIALTY_AREAS.map((area) => (
                         <SelectItem key={area} value={area}>
                           {area}
                         </SelectItem>
@@ -444,9 +499,15 @@ export function ElectivesManager({
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredElectives.map((elective) => {
               const isCustom = customElectives.some((ce) => ce.id === elective.id)
+              const isSelected = selectedElectiveIds.has(elective.id)
 
               return (
-                <Card key={elective.id} className="hover:shadow-md transition-shadow">
+                <Card
+                  key={elective.id}
+                  className={`hover:shadow-md transition-shadow ${
+                    isSelected ? "ring-2 ring-yellow-400 bg-yellow-50/50" : ""
+                  }`}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
@@ -457,6 +518,12 @@ export function ElectivesManager({
                           <Badge variant="secondary" className="text-xs">
                             {elective.credits} créditos
                           </Badge>
+                          {isSelected && (
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              <Check className="h-3 w-3 mr-1" />
+                              Seleccionada
+                            </Badge>
+                          )}
                         </div>
                         <h4 className="font-semibold text-sm mb-2 line-clamp-2">{elective.name}</h4>
                       </div>
@@ -543,7 +610,7 @@ export function ElectivesManager({
                     )}
 
                     {/* Year Selection for Multi-Year Electives */}
-                    {elective.availableYears && elective.availableYears.length > 1 ? (
+                    {!isSelected && elective.availableYears && elective.availableYears.length > 1 ? (
                       <div className="space-y-2">
                         <p className="text-xs font-medium">Seleccionar año:</p>
                         <div className="grid grid-cols-2 gap-1">
@@ -571,7 +638,7 @@ export function ElectivesManager({
                           ))}
                         </div>
                       </div>
-                    ) : (
+                    ) : !isSelected ? (
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => handleSelectElective(elective, 1)} className="flex-1">
                           Agregar S1
@@ -584,6 +651,10 @@ export function ElectivesManager({
                         >
                           Agregar S2
                         </Button>
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 text-sm text-yellow-700 bg-yellow-50 rounded-md">
+                        Ya has seleccionado esta optativa
                       </div>
                     )}
                   </CardContent>
@@ -603,6 +674,18 @@ export function ElectivesManager({
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="recommendations" className="space-y-6">
+          <ElectiveRecommendations
+            assignments={assignments}
+            completedAssignments={completedAssignments}
+            availableElectives={allElectives}
+            selectedElectiveIds={selectedElectiveIds}
+            career={selectedCareer}
+            maxYear={7}
+            onSelectElective={handleSelectElective}
+          />
         </TabsContent>
 
         <TabsContent value="custom" className="space-y-6">
@@ -660,13 +743,22 @@ export function ElectivesManager({
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="area">Área (Opcional)</Label>
-                      <Input
-                        id="area"
+                      <Label htmlFor="area">Área</Label>
+                      <Select
                         value={newElective.area}
-                        onChange={(e) => setNewElective({ ...newElective, area: e.target.value })}
-                        placeholder="Ej: Medicina Tropical"
-                      />
+                        onValueChange={(value) => setNewElective({ ...newElective, area: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona un área" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[300px] overflow-y-auto">
+                          {MEDICAL_SPECIALTY_AREAS.map((area) => (
+                            <SelectItem key={area} value={area}>
+                              {area}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div>
@@ -809,13 +901,22 @@ export function ElectivesManager({
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="edit-area">Área (Opcional)</Label>
-                    <Input
-                      id="edit-area"
+                    <Label htmlFor="edit-area">Área</Label>
+                    <Select
                       value={newElective.area}
-                      onChange={(e) => setNewElective({ ...newElective, area: e.target.value })}
-                      placeholder="Ej: Medicina Tropical"
-                    />
+                      onValueChange={(value) => setNewElective({ ...newElective, area: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un área" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px] overflow-y-auto">
+                        {MEDICAL_SPECIALTY_AREAS.map((area) => (
+                          <SelectItem key={area} value={area}>
+                            {area}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>

@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Brain, TrendingUp, Users, Award, Target } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Brain, TrendingUp, Award, Target, Check, Star } from "lucide-react"
+import { useLanguage } from "@/hooks/use-language"
 
 interface Assignment {
   id: string
@@ -43,106 +45,144 @@ interface ElectiveOption {
 interface ElectiveRecommendationsProps {
   assignments: Assignment[]
   completedAssignments: Set<string>
+  selectedElectiveIds: Set<string>
   availableElectives: ElectiveOption[]
   career: string
   maxYear: number
   onSelectElective: (elective: ElectiveOption, semester: number, selectedYear?: number) => void
 }
 
+const CAREER_OPTIONS = [
+  { value: "internal_medicine", label: "Medicina Interna" },
+  { value: "surgeon", label: "Cirugía" },
+  { value: "pediatrician", label: "Pediatría" },
+  { value: "psychiatrist", label: "Psiquiatría" },
+  { value: "pathologist", label: "Patología" },
+  { value: "radiologist", label: "Radiología" },
+  { value: "anesthesiologist", label: "Anestesiología" },
+  { value: "emergency_medicine", label: "Medicina de Emergencia" },
+  { value: "family_medicine", label: "Medicina Familiar" },
+  { value: "public_health", label: "Salud Pública" },
+  { value: "researcher", label: "Investigación Médica" },
+]
+
 export default function ElectiveRecommendations({
   assignments,
   completedAssignments,
+  selectedElectiveIds,
   availableElectives,
   career,
   maxYear,
   onSelectElective,
 }: ElectiveRecommendationsProps) {
-  // Filter available electives that aren't already selected
-  const unselectedElectives = availableElectives.filter((elective) => {
-    return !assignments.some((a) => a.id === elective.id)
+  const { t } = useLanguage()
+  const [selectedCareer, setSelectedCareer] = useState<string>("internal_medicine")
+
+  // Filter available electives (prerequisites met)
+  const filteredElectives = availableElectives.filter((elective) => {
+    // Check if elective is available (prerequisites met)
+    let prerequisitesMet = true
+
+    // Check year requirements
+    if (elective.requiresFullYear && Array.isArray(elective.requiresFullYear)) {
+      prerequisitesMet = elective.requiresFullYear.every((year) => {
+        const yearAssignments = assignments.filter((a) => a.year === year && a.category === "core")
+        return yearAssignments.length > 0 && yearAssignments.every((a) => completedAssignments.has(a.id))
+      })
+    }
+
+    // Check dependencies
+    if (prerequisitesMet && elective.dependencies && Array.isArray(elective.dependencies)) {
+      prerequisitesMet = elective.dependencies.every((dep) => completedAssignments.has(dep))
+    }
+
+    return prerequisitesMet
   })
 
-  // AI-powered recommendations based on completed courses and career goals
+  // Get AI recommendations based on career choice
   const getRecommendations = () => {
-    const completedCourses = assignments.filter((a) => completedAssignments.has(a.id))
-    const completedAreas = new Set(completedCourses.map((c) => c.category))
-
-    // Score electives based on various factors
-    const scoredElectives = unselectedElectives
-      .map((elective) => {
-        let score = 0
-
-        // Career relevance (40% weight)
-        if (elective.careerRelevance && career !== "all") {
-          score += (elective.careerRelevance[career] || 0) * 0.4
-        }
-
-        // Popularity (20% weight)
-        if (elective.popularity) {
-          score += elective.popularity * 0.2
-        }
-
-        // Rating (20% weight)
-        if (elective.rating) {
-          score += (elective.rating / 5) * 100 * 0.2
-        }
-
-        // Prerequisites met bonus (10% weight)
-        if (elective.dependencies && elective.dependencies.length > 0) {
-          const metPrereqs = elective.dependencies.filter((dep) => completedAssignments.has(dep)).length
-          score += (metPrereqs / elective.dependencies.length) * 100 * 0.1
-        } else {
-          score += 10 // Bonus for no prerequisites
-        }
-
-        // Difficulty adjustment (10% weight) - prefer moderate difficulty
-        if (elective.difficulty) {
-          const difficultyScore = 100 - Math.abs(elective.difficulty - 6) * 10
-          score += difficultyScore * 0.1
-        }
-
-        return { ...elective, score }
+    const careerRelevantElectives = filteredElectives
+      .filter((elective) => elective.careerRelevance && elective.careerRelevance[selectedCareer])
+      .sort((a, b) => {
+        const aRelevance = a.careerRelevance?.[selectedCareer] || 0
+        const bRelevance = b.careerRelevance?.[selectedCareer] || 0
+        return bRelevance - aRelevance
       })
-      .sort((a, b) => b.score - a.score)
       .slice(0, 6) // Top 6 recommendations
 
-    return scoredElectives
+    return careerRelevantElectives
   }
 
   const recommendations = getRecommendations()
 
-  // Get trending electives (high popularity + recent additions)
-  const trendingElectives = unselectedElectives
-    .filter((e) => e.popularity && e.popularity > 70)
-    .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-    .slice(0, 4)
-
-  // Get highly rated electives
-  const topRatedElectives = unselectedElectives
-    .filter((e) => e.rating && e.rating >= 4.0 && e.reviews && e.reviews >= 10)
-    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-    .slice(0, 4)
+  // Get completed courses for context
+  const completedCourses = assignments.filter((a) => a.completed)
+  const completedAreas = Array.from(new Set(completedCourses.map((c) => c.category)))
 
   return (
     <div className="space-y-6">
-      {/* AI Recommendations */}
+      {/* AI Career Selector */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-600" />
-            Recomendaciones Personalizadas IA
+            <Brain className="w-5 h-5 text-purple-600" />
+            Recomendaciones Inteligentes
           </CardTitle>
           <CardDescription>
-            Basadas en tu progreso académico, materias completadas y objetivos de carrera
+            Selecciona tu especialidad de interés para recibir recomendaciones personalizadas
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {recommendations.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {recommendations.map((elective) => (
-                <Card key={elective.id} className="border-purple-200 bg-purple-50/50">
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-2 block">Especialidad de Interés:</label>
+              <Select value={selectedCareer} onValueChange={setSelectedCareer}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona una especialidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CAREER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+              <p className="font-medium mb-1">📊 Tu Progreso:</p>
+              <p>✅ {completedCourses.length} materias completadas</p>
+              <p>🎯 {recommendations.length} optativas recomendadas</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Recommendations */}
+      {recommendations.length > 0 ? (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-semibold">
+              Recomendaciones para {CAREER_OPTIONS.find((c) => c.value === selectedCareer)?.label}
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recommendations.map((elective, index) => {
+              const relevanceScore = elective.careerRelevance?.[selectedCareer] || 0
+              const isHighlyRecommended = relevanceScore >= 80
+              const isSelected = selectedElectiveIds.has(elective.id)
+
+              return (
+                <Card
+                  key={elective.id}
+                  className={`hover:shadow-md transition-shadow ${
+                    isHighlyRecommended ? "ring-2 ring-green-200 bg-green-50" : ""
+                  } ${isSelected ? "ring-2 ring-yellow-400 bg-yellow-50/50" : ""}`}
+                >
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge variant="outline" className="text-xs font-mono">
@@ -151,20 +191,41 @@ export default function ElectiveRecommendations({
                           <Badge variant="secondary" className="text-xs">
                             {elective.credits} créditos
                           </Badge>
+                          {isHighlyRecommended && (
+                            <Badge className="text-xs bg-green-600">
+                              <Star className="w-3 h-3 mr-1" />
+                              Top
+                            </Badge>
+                          )}
+                          {isSelected && (
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              <Check className="h-3 w-3 mr-1" />
+                              Seleccionada
+                            </Badge>
+                          )}
                         </div>
-                        <h4 className="font-semibold text-sm mb-1">{elective.name}</h4>
+                        <h4 className="font-semibold text-sm mb-2 line-clamp-2">{elective.name}</h4>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs text-purple-600 font-medium">{Math.round(elective.score)}% match</div>
-                        <Progress value={elective.score} className="w-16 h-1 mt-1" />
+                        <div className="text-xs font-medium text-green-600">#{index + 1}</div>
+                        <div className="text-xs text-gray-500">{relevanceScore}% match</div>
                       </div>
                     </div>
 
-                    {elective.area && (
-                      <Badge className="mb-2 text-xs bg-purple-100 text-purple-800">{elective.area}</Badge>
-                    )}
+                    {elective.area && <Badge className="mb-2 text-xs bg-blue-100 text-blue-800">{elective.area}</Badge>}
 
-                    <p className="text-xs text-gray-600 mb-3 line-clamp-2">{elective.description}</p>
+                    <p className="text-xs text-gray-600 mb-3 line-clamp-3">{elective.description}</p>
+
+                    {/* AI Reasoning */}
+                    <div className="mb-3 p-2 bg-purple-50 rounded text-xs">
+                      <p className="font-medium text-purple-800 mb-1">🤖 Por qué es recomendada:</p>
+                      <p className="text-purple-700">
+                        {relevanceScore >= 90 && "Altamente relevante para tu especialidad elegida"}
+                        {relevanceScore >= 80 && relevanceScore < 90 && "Muy útil para tu carrera profesional"}
+                        {relevanceScore >= 70 && relevanceScore < 80 && "Complementa bien tu formación"}
+                        {relevanceScore < 70 && "Puede ser de interés según tu perfil"}
+                      </p>
+                    </div>
 
                     {/* Available Years */}
                     {elective.availableYears && elective.availableYears.length > 0 && (
@@ -184,9 +245,9 @@ export default function ElectiveRecommendations({
                     <div className="mb-3">
                       <div className="flex flex-wrap gap-1">
                         {elective.careerRelevance &&
-                          career !== "all" &&
-                          elective.careerRelevance[career] &&
-                          elective.careerRelevance[career] > 70 && (
+                          selectedCareer !== "all" &&
+                          elective.careerRelevance[selectedCareer] &&
+                          elective.careerRelevance[selectedCareer] > 70 && (
                             <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
                               <Target className="w-2 h-2 mr-1" />
                               Relevante para carrera
@@ -208,7 +269,7 @@ export default function ElectiveRecommendations({
                     </div>
 
                     {/* Year Selection for Multi-Year Electives */}
-                    {elective.availableYears && elective.availableYears.length > 1 ? (
+                    {!isSelected && elective.availableYears && elective.availableYears.length > 1 ? (
                       <div className="space-y-2">
                         <p className="text-xs font-medium">Seleccionar año:</p>
                         <div className="grid grid-cols-2 gap-1">
@@ -236,7 +297,7 @@ export default function ElectiveRecommendations({
                           ))}
                         </div>
                       </div>
-                    ) : (
+                    ) : !isSelected ? (
                       <div className="flex gap-2">
                         <Button size="sm" onClick={() => onSelectElective(elective, 1)} className="flex-1">
                           Agregar S1
@@ -250,199 +311,26 @@ export default function ElectiveRecommendations({
                           Agregar S2
                         </Button>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-600 mb-2">No hay recomendaciones disponibles</h3>
-              <p className="text-sm text-gray-500">
-                Completa más materias básicas para recibir recomendaciones personalizadas
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Trending Electives */}
-      {trendingElectives.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-              Optativas Populares
-            </CardTitle>
-            <CardDescription>Las optativas más elegidas por otros estudiantes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {trendingElectives.map((elective) => (
-                <Card key={elective.id} className="border-blue-200 bg-blue-50/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="text-xs font-mono">
-                            {elective.code}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {elective.credits} créditos
-                          </Badge>
-                        </div>
-                        <h4 className="font-semibold text-sm mb-1">{elective.name}</h4>
-                      </div>
-                      <Badge className="bg-blue-100 text-blue-800 text-xs">
-                        <Users className="w-2 h-2 mr-1" />
-                        {elective.popularity}% popularidad
-                      </Badge>
-                    </div>
-
-                    {elective.area && <Badge className="mb-2 text-xs bg-blue-100 text-blue-800">{elective.area}</Badge>}
-
-                    <p className="text-xs text-gray-600 mb-3 line-clamp-2">{elective.description}</p>
-
-                    {/* Year Selection for Multi-Year Electives */}
-                    {elective.availableYears && elective.availableYears.length > 1 ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium">Seleccionar año:</p>
-                        <div className="grid grid-cols-2 gap-1">
-                          {elective.availableYears.map((year) => (
-                            <div key={year} className="space-y-1">
-                              <p className="text-xs text-center">{year}° Año</p>
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  onClick={() => onSelectElective(elective, 1, year)}
-                                  className="flex-1 text-xs py-1"
-                                >
-                                  S1
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => onSelectElective(elective, 2, year)}
-                                  className="flex-1 text-xs py-1"
-                                >
-                                  S2
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
                     ) : (
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => onSelectElective(elective, 1)} className="flex-1">
-                          Agregar S1
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onSelectElective(elective, 2)}
-                          className="flex-1"
-                        >
-                          Agregar S2
-                        </Button>
+                      <div className="text-center py-2 text-sm text-yellow-700 bg-yellow-50 rounded-md">
+                        Ya has seleccionado esta optativa
                       </div>
                     )}
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Top Rated Electives */}
-      {topRatedElectives.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-yellow-600" />
-              Mejor Calificadas
-            </CardTitle>
-            <CardDescription>Optativas con las mejores evaluaciones de estudiantes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {topRatedElectives.map((elective) => (
-                <Card key={elective.id} className="border-yellow-200 bg-yellow-50/50">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className="text-xs font-mono">
-                            {elective.code}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {elective.credits} créditos
-                          </Badge>
-                        </div>
-                        <h4 className="font-semibold text-sm mb-1">{elective.name}</h4>
-                      </div>
-                      <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                        <Award className="w-2 h-2 mr-1" />
-                        {elective.rating?.toFixed(1)} ⭐
-                      </Badge>
-                    </div>
-
-                    {elective.area && (
-                      <Badge className="mb-2 text-xs bg-yellow-100 text-yellow-800">{elective.area}</Badge>
-                    )}
-
-                    <p className="text-xs text-gray-600 mb-3 line-clamp-2">{elective.description}</p>
-
-                    {/* Year Selection for Multi-Year Electives */}
-                    {elective.availableYears && elective.availableYears.length > 1 ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium">Seleccionar año:</p>
-                        <div className="grid grid-cols-2 gap-1">
-                          {elective.availableYears.map((year) => (
-                            <div key={year} className="space-y-1">
-                              <p className="text-xs text-center">{year}° Año</p>
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  onClick={() => onSelectElective(elective, 1, year)}
-                                  className="flex-1 text-xs py-1"
-                                >
-                                  S1
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => onSelectElective(elective, 2, year)}
-                                  className="flex-1 text-xs py-1"
-                                >
-                                  S2
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => onSelectElective(elective, 1)} className="flex-1">
-                          Agregar S1
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onSelectElective(elective, 2)}
-                          className="flex-1"
-                        >
-                          Agregar S2
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="p-8 text-center">
+            <Brain className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-600 mb-2">No hay recomendaciones disponibles</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Completa más materias básicas para desbloquear recomendaciones personalizadas para{" "}
+              {CAREER_OPTIONS.find((c) => c.value === selectedCareer)?.label}
+            </p>
           </CardContent>
         </Card>
       )}
