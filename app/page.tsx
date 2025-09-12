@@ -30,6 +30,7 @@ import { GuestBanner } from "@/app/components/guest-banner"
 import { ImportExport } from "@/app/components/import-export"
 import { ElectivesManager } from "@/app/components/electives-manager"
 import { AssignmentManager } from "@/app/components/assignment-manager"
+import { AssignmentEditor } from "@/app/components/assignment-editor"
 import { ExamPlanner } from "@/app/components/exam-planner"
 import { defaultAssignments } from "@/app/data/default-assignments"
 
@@ -96,6 +97,7 @@ export default function Home() {
   const [exams, setExams] = useState<Exam[]>([])
   const [activeTab, setActiveTab] = useState("assignments")
   const [showAssignmentManager, setShowAssignmentManager] = useState(false)
+  const [showAssignmentEditor, setShowAssignmentEditor] = useState(false)
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null)
   const { language, setLanguage, t } = useLanguage()
 
@@ -432,7 +434,11 @@ export default function Home() {
 
   const handleEditAssignment = (assignment: Assignment) => {
     setEditingAssignment(assignment)
-    setShowAssignmentManager(true)
+    setShowAssignmentEditor(true)
+  }
+
+  const handleUpdateAssignment = (updatedAssignment: Assignment) => {
+    setAssignments((prev) => prev.map((a) => (a.id === updatedAssignment.id ? updatedAssignment : a)))
   }
 
   const handleAddElective = (elective: Assignment) => {
@@ -1077,6 +1083,19 @@ export default function Home() {
           onAddAssignment={handleAddAssignment}
           existingAssignments={assignments}
           editingAssignment={editingAssignment}
+          maxYear={7}
+        />
+
+        {/* Assignment Editor Dialog */}
+        <AssignmentEditor
+          isOpen={showAssignmentEditor}
+          onClose={() => {
+            setShowAssignmentEditor(false)
+            setEditingAssignment(null)
+          }}
+          onUpdateAssignment={handleUpdateAssignment}
+          assignment={editingAssignment}
+          existingAssignments={assignments}
           maxYear={7}
         />
       </div>

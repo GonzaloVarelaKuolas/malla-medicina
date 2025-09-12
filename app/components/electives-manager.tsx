@@ -25,6 +25,7 @@ import {
   Edit,
   Trash2,
   Check,
+  X,
 } from "lucide-react"
 import { useLanguage } from "@/hooks/use-language"
 import ElectiveRecommendations from "@/app/components/elective-recommendations"
@@ -69,7 +70,7 @@ interface ElectiveOption {
   prerequisites?: string[]
   rating?: number
   reviews?: number
-  availableYears?: number[] // New field for multiple years
+  availableYears?: number[]
 }
 
 interface ElectivesManagerProps {
@@ -249,7 +250,7 @@ export function ElectivesManager({
   onUpdateCustomElectives,
 }: ElectivesManagerProps) {
   const { t } = useLanguage()
-  const [activeTab, setActiveTab] = useState("catalog") // Changed default to catalog
+  const [activeTab, setActiveTab] = useState("catalog")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedArea, setSelectedArea] = useState<string>("all")
   const [selectedCareer, setSelectedCareer] = useState<string>("all")
@@ -322,6 +323,14 @@ export function ElectivesManager({
       requiresFullYear: elective.requiresFullYear,
     }
     onAddElective(newAssignment)
+  }
+
+  const handleDeselectElective = (electiveId: string) => {
+    // This function would need to be passed from the parent component
+    // For now, we'll show a message that it needs to be removed from the main assignments view
+    alert(
+      "Para deseleccionar esta optativa, ve a la pestaña 'Materias' y elimínala desde allí usando el menú de tres puntos.",
+    )
   }
 
   const handleAddCustomElective = () => {
@@ -557,11 +566,13 @@ export function ElectivesManager({
                       <div className="mb-3">
                         <p className="text-xs font-medium text-gray-700 mb-1">Años disponibles:</p>
                         <div className="flex flex-wrap gap-1">
-                          {elective.availableYears.map((year) => (
-                            <Badge key={year} variant="outline" className="text-xs">
-                              {year}°
-                            </Badge>
-                          ))}
+                          {elective.availableYears
+                            .filter((year) => year > 0)
+                            .map((year) => (
+                              <Badge key={year} variant="outline" className="text-xs">
+                                {year}°
+                              </Badge>
+                            ))}
                         </div>
                       </div>
                     )}
@@ -609,33 +620,35 @@ export function ElectivesManager({
                       </div>
                     )}
 
-                    {/* Year Selection for Multi-Year Electives */}
+                    {/* Action Buttons */}
                     {!isSelected && elective.availableYears && elective.availableYears.length > 1 ? (
                       <div className="space-y-2">
                         <p className="text-xs font-medium">Seleccionar año:</p>
                         <div className="grid grid-cols-2 gap-1">
-                          {elective.availableYears.map((year) => (
-                            <div key={year} className="space-y-1">
-                              <p className="text-xs text-center">{year}° Año</p>
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSelectElective(elective, 1, year)}
-                                  className="flex-1 text-xs py-1"
-                                >
-                                  S1
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleSelectElective(elective, 2, year)}
-                                  className="flex-1 text-xs py-1"
-                                >
-                                  S2
-                                </Button>
+                          {elective.availableYears
+                            .filter((year) => year > 0)
+                            .map((year) => (
+                              <div key={year} className="space-y-1">
+                                <p className="text-xs text-center">{year}° Año</p>
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSelectElective(elective, 1, year)}
+                                    className="flex-1 text-xs py-1"
+                                  >
+                                    S1
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleSelectElective(elective, 2, year)}
+                                    className="flex-1 text-xs py-1"
+                                  >
+                                    S2
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       </div>
                     ) : !isSelected ? (
@@ -653,8 +666,16 @@ export function ElectivesManager({
                         </Button>
                       </div>
                     ) : (
-                      <div className="text-center py-2 text-sm text-yellow-700 bg-yellow-50 rounded-md">
-                        Ya has seleccionado esta optativa
+                      <div className="flex items-center justify-between py-2 px-3 text-sm text-yellow-700 bg-yellow-50 rounded-md">
+                        <span>Ya seleccionada</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeselectElective(elective.id)}
+                          className="h-6 w-6 p-0 text-yellow-600 hover:text-yellow-800"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
                     )}
                   </CardContent>
