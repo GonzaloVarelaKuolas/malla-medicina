@@ -76,6 +76,7 @@ interface ElectiveOption {
 interface ElectivesManagerProps {
   assignments: Assignment[]
   onAddElective: (elective: Assignment) => void
+  onRemoveElective: (electiveId: string) => void
   customElectives: ElectiveOption[]
   onUpdateCustomElectives: (electives: ElectiveOption[]) => void
 }
@@ -246,6 +247,7 @@ const ADDITIONAL_ELECTIVES: ElectiveOption[] = [
 export function ElectivesManager({
   assignments,
   onAddElective,
+  onRemoveElective,
   customElectives,
   onUpdateCustomElectives,
 }: ElectivesManagerProps) {
@@ -266,8 +268,23 @@ export function ElectivesManager({
     area: "",
   })
 
-  // Get IDs of selected electives
-  const selectedElectiveIds = new Set(assignments.map((a) => a.id))
+  // Get IDs of selected electives - check by elective ID, not assignment ID
+  const selectedElectiveIds = new Set(
+    assignments
+      .filter((a) => a.category === "elective")
+      .map((a) => {
+        // For electives, the assignment ID contains the elective ID
+        // Format: "elective-{electiveId}-{timestamp}" or just the elective ID
+        if (a.id.startsWith("elective-")) {
+          const parts = a.id.split("-")
+          if (parts.length >= 2) {
+            return parts.slice(1, -1).join("-") // Remove "elective-" prefix and timestamp suffix
+          }
+        }
+        return a.id
+      }),
+  )
+
   const completedAssignments = new Set(assignments.filter((a) => a.completed).map((a) => a.id))
 
   // Combine all electives: medicine electives + additional electives + custom electives
@@ -308,7 +325,7 @@ export function ElectivesManager({
     const year = selectedYear || (elective.requiresFullYear ? Math.max(...elective.requiresFullYear) + 1 : 4)
 
     const newAssignment: Assignment = {
-      id: elective.id,
+      id: `elective-${elective.id}-${Date.now()}`,
       name: elective.name,
       code: elective.code,
       credits: elective.credits,
@@ -326,11 +343,25 @@ export function ElectivesManager({
   }
 
   const handleDeselectElective = (electiveId: string) => {
-    // This function would need to be passed from the parent component
-    // For now, we'll show a message that it needs to be removed from the main assignments view
-    alert(
-      "Para deseleccionar esta optativa, ve a la pestaña 'Materias' y elimínala desde allí usando el menú de tres puntos.",
-    )
+    // Find the assignment that corresponds to this elective
+    const electiveAssignment = assignments.find((a) => {
+      if (a.category === "elective") {
+        // Check if this assignment corresponds to the elective
+        if (a.id.startsWith("elective-")) {
+          const parts = a.id.split("-")
+          if (parts.length >= 2) {
+            const extractedId = parts.slice(1, -1).join("-")
+            return extractedId === electiveId
+          }
+        }
+        return a.id === electiveId
+      }
+      return false
+    })
+
+    if (electiveAssignment) {
+      onRemoveElective(electiveAssignment.id)
+    }
   }
 
   const handleAddCustomElective = () => {
@@ -514,7 +545,7 @@ export function ElectivesManager({
                 <Card
                   key={elective.id}
                   className={`hover:shadow-md transition-shadow ${
-                    isSelected ? "ring-2 ring-yellow-400 bg-yellow-50/50" : ""
+                    isSelected ? "ring-2 ring-yellow-400 bg-yellow-50/50" : "bg-gray-50/50"
                   }`}
                 >
                   <CardContent className="p-4">

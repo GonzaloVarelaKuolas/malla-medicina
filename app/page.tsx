@@ -445,6 +445,10 @@ export default function Home() {
     setAssignments((prev) => [...prev, elective])
   }
 
+  const handleRemoveElective = (electiveId: string) => {
+    setAssignments((prev) => prev.filter((a) => a.id !== electiveId))
+  }
+
   const handleUpdateCustomElectives = (electives: ElectiveOption[]) => {
     setCustomElectives(electives)
   }
@@ -1063,6 +1067,7 @@ export default function Home() {
             <ElectivesManager
               assignments={assignments}
               onAddElective={handleAddElective}
+              onRemoveElective={handleRemoveElective}
               customElectives={customElectives}
               onUpdateCustomElectives={handleUpdateCustomElectives}
             />
