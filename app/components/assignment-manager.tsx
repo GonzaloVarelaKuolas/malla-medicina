@@ -162,36 +162,36 @@ export function AssignmentManager({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editingAssignment ? t("actions.editAssignment") : t("actions.addAssignment")}</DialogTitle>
+          <DialogTitle>{editingAssignment ? "Editar Materia" : "Agregar Nueva Materia"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="name">{t("form.name")} *</Label>
+              <Label htmlFor="name">Nombre *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder={t("form.namePlaceholder")}
+                placeholder="Anatomía Humana"
                 required
               />
             </div>
             <div>
-              <Label htmlFor="code">{t("form.code")}</Label>
+              <Label htmlFor="code">Código</Label>
               <Input
                 id="code"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                placeholder={t("form.codePlaceholder")}
+                placeholder="AH101"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="credits">{t("form.credits")} *</Label>
+              <Label htmlFor="credits">Créditos *</Label>
               <Input
                 id="credits"
                 type="number"
@@ -203,7 +203,7 @@ export function AssignmentManager({
               />
             </div>
             <div>
-              <Label htmlFor="year">{t("form.year")} *</Label>
+              <Label htmlFor="year">Año *</Label>
               <Select
                 value={formData.year.toString()}
                 onValueChange={(value) => setFormData({ ...formData, year: Number.parseInt(value) })}
@@ -214,14 +214,14 @@ export function AssignmentManager({
                 <SelectContent>
                   {Array.from({ length: maxYear }, (_, i) => i + 1).map((year) => (
                     <SelectItem key={year} value={year.toString()}>
-                      {t(`year.${year}`)}
+                      Año {year}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="semester">{t("form.semester")} *</Label>
+              <Label htmlFor="semester">Semestre *</Label>
               <Select
                 value={formData.semester.toString()}
                 onValueChange={(value) => setFormData({ ...formData, semester: Number.parseInt(value) })}
@@ -230,15 +230,15 @@ export function AssignmentManager({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">{t("semester.1")}</SelectItem>
-                  <SelectItem value="2">{t("semester.2")}</SelectItem>
+                  <SelectItem value="1">Semestre 1</SelectItem>
+                  <SelectItem value="2">Semestre 2</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div>
-            <Label htmlFor="category">{t("form.category")} *</Label>
+            <Label htmlFor="category">Categoría *</Label>
             <Select
               value={formData.category}
               onValueChange={(value: any) => setFormData({ ...formData, category: value })}
@@ -247,11 +247,11 @@ export function AssignmentManager({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="core">{t("category.core")}</SelectItem>
-                <SelectItem value="elective">{t("category.elective")}</SelectItem>
-                <SelectItem value="clinical">{t("category.clinical")}</SelectItem>
-                <SelectItem value="basic">{t("category.basic")}</SelectItem>
-                <SelectItem value="internship">{t("category.internship")}</SelectItem>
+                <SelectItem value="core">Básica</SelectItem>
+                <SelectItem value="elective">Optativa</SelectItem>
+                <SelectItem value="clinical">Clínica</SelectItem>
+                <SelectItem value="basic">Básica</SelectItem>
+                <SelectItem value="internship">Internado</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -259,37 +259,37 @@ export function AssignmentManager({
           {/* Additional Information */}
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <Label htmlFor="instructor">{t("form.instructor")}</Label>
+              <Label htmlFor="instructor">Profesor</Label>
               <Input
                 id="instructor"
                 value={formData.instructor}
                 onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
-                placeholder={t("form.instructorPlaceholder")}
+                placeholder="Dr. García López"
               />
             </div>
             <div>
-              <Label htmlFor="schedule">{t("form.schedule")}</Label>
+              <Label htmlFor="schedule">Horario</Label>
               <Input
                 id="schedule"
                 value={formData.schedule}
                 onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                placeholder={t("form.schedulePlaceholder")}
+                placeholder="Lun-Vie 8:00-10:00"
               />
             </div>
             <div>
-              <Label htmlFor="location">{t("form.location")}</Label>
+              <Label htmlFor="location">Ubicación</Label>
               <Input
                 id="location"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder={t("form.locationPlaceholder")}
+                placeholder="Aula 205, Edificio A"
               />
             </div>
           </div>
 
           {/* Full Year Requirements */}
           <div>
-            <Label>{t("prerequisites.fullYear")}</Label>
+            <Label>Requiere completar años completos</Label>
             <div className="flex flex-wrap gap-2 mt-2">
               {Array.from({ length: maxYear }, (_, i) => i + 1).map((year) => (
                 <div key={year} className="flex items-center space-x-2">
@@ -299,7 +299,7 @@ export function AssignmentManager({
                     onCheckedChange={() => handleFullYearToggle(year)}
                   />
                   <Label htmlFor={`fullYear-${year}`} className="text-sm">
-                    {t(`year.${year}`)}
+                    Año {year}
                   </Label>
                 </div>
               ))}
@@ -309,7 +309,7 @@ export function AssignmentManager({
           {/* Prerequisites */}
           {availableAssignments.length > 0 && (
             <div>
-              <Label>{t("prerequisites.title")}</Label>
+              <Label>Prerrequisitos individuales</Label>
               <div className="max-h-40 overflow-y-auto border rounded-md p-3 mt-2">
                 <div className="space-y-2">
                   {availableAssignments.map((assignment) => (
@@ -361,11 +361,9 @@ export function AssignmentManager({
           {/* Form Actions */}
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
-              {t("actions.cancel")}
+              Cancelar
             </Button>
-            <Button type="submit">
-              {editingAssignment ? t("actions.updateAssignment") : t("actions.addAssignment")}
-            </Button>
+            <Button type="submit">{editingAssignment ? "Actualizar Materia" : "Agregar Materia"}</Button>
           </div>
         </form>
       </DialogContent>

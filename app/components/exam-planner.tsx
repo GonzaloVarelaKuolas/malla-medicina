@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Plus, Clock, MapPin, Edit, Trash2, AlertTriangle, Star } from "lucide-react"
+import { Calendar, Plus, Clock, MapPin, Edit, Trash2, AlertTriangle, Star, CheckCircle } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface Assignment {
@@ -62,6 +62,9 @@ export function ExamPlanner({ assignments, completedAssignments }: ExamPlannerPr
     notes: "",
     grade: "",
   })
+
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
+  const [completingExam, setCompletingExam] = useState<Exam | null>(null)
 
   // Load exams from localStorage
   useEffect(() => {
@@ -180,6 +183,26 @@ export function ExamPlanner({ assignments, completedAssignments }: ExamPlannerPr
 
     setShowGradeDialog(false)
     resetForm()
+  }
+
+  const handleCompleteExam = (exam: Exam) => {
+    setCompletingExam(exam)
+    setShowCompletionDialog(true)
+  }
+
+  const handleSubmitCompletion = () => {
+    if (!completingExam) return
+
+    const grade = newExam.grade ? Number.parseFloat(newExam.grade) : undefined
+    const percentile = grade ? calculatePercentile(grade) : undefined
+
+    setExams((prev) =>
+      prev.map((e) => (e.id === completingExam.id ? { ...e, completed: true, grade, gradePercentile: percentile } : e)),
+    )
+
+    setShowCompletionDialog(false)
+    setCompletingExam(null)
+    setNewExam({ ...newExam, grade: "" })
   }
 
   const resetForm = () => {
@@ -347,6 +370,11 @@ export function ExamPlanner({ assignments, completedAssignments }: ExamPlannerPr
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {!exam.completed && (
+                          <Button size="sm" variant="outline" onClick={() => handleCompleteExam(exam)}>
+                            <CheckCircle className="w-4 h-4" />
+                          </Button>
+                        )}
                         {!exam.completed && isPastDate(exam.date) && (
                           <Button size="sm" variant="outline" onClick={() => handleAddGrade(exam)}>
                             Agregar Nota
@@ -544,6 +572,49 @@ export function ExamPlanner({ assignments, completedAssignments }: ExamPlannerPr
               <Button onClick={handleGradeSubmit} disabled={!newExam.grade}>
                 Guardar Calificación
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Completion Dialog */}
+      <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Marcar como Completado</DialogTitle>
+            <DialogDescription>
+              Marca el examen como completado y opcionalmente agrega una calificación
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <h4 className="font-medium">{completingExam?.assignmentName}</h4>
+              <p className="text-sm text-gray-600">
+                {completingExam?.type.toUpperCase()} •{" "}
+                {completingExam && new Date(completingExam.date).toLocaleDateString("es")}
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="completion-grade">Calificación (Opcional)</Label>
+              <Input
+                id="completion-grade"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={newExam.grade}
+                onChange={(e) => setNewExam({ ...newExam, grade: e.target.value })}
+                placeholder="Ej: 85.5"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCompletionDialog(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSubmitCompletion}>Marcar Completado</Button>
             </div>
           </div>
         </DialogContent>
