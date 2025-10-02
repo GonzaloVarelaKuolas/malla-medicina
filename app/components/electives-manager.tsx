@@ -446,8 +446,30 @@ export function ElectivesManager({
 
   const handleDeleteElective = (elective: ElectiveOption) => {
     if (confirm("¿Estás seguro de que quieres eliminar esta optativa?")) {
+      // Remove from custom electives
       const updatedElectives = customElectives.filter((e) => e.id !== elective.id)
       onUpdateCustomElectives(updatedElectives)
+
+      // Also remove any assignments that were created from this elective
+      const assignmentsToRemove = assignments.filter((a) => {
+        if (a.category === "elective") {
+          // Check if this assignment was created from the deleted elective
+          if (a.id.startsWith("elective-")) {
+            const parts = a.id.split("-")
+            if (parts.length >= 2) {
+              const extractedId = parts.slice(1, -1).join("-")
+              return extractedId === elective.id
+            }
+          }
+          return a.id === elective.id
+        }
+        return false
+      })
+
+      // Remove all assignments that were created from this elective
+      assignmentsToRemove.forEach((assignment) => {
+        onRemoveElective(assignment.id)
+      })
     }
   }
 
