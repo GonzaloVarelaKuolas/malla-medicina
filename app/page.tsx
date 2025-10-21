@@ -157,6 +157,11 @@ export default function Home() {
     localStorage.setItem("custom-electives", JSON.stringify(customElectives))
   }, [customElectives])
 
+  // Save exams to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("medical-curriculum-exams", JSON.stringify(exams))
+  }, [exams])
+
   const toggleAssignment = (id: string) => {
     setAssignments((prev) =>
       Array.isArray(prev)
@@ -451,6 +456,11 @@ export default function Home() {
 
   const handleUpdateCustomElectives = (electives: ElectiveOption[]) => {
     setCustomElectives(electives)
+  }
+
+  // Add a handler function for exam changes
+  const handleExamsChange = (updatedExams: Exam[]) => {
+    setExams(updatedExams)
   }
 
   // Safe calculations with null checks
@@ -920,7 +930,11 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="planner" className="space-y-6">
-            <ExamPlanner assignments={assignments} completedAssignments={completedAssignmentIds} />
+            <ExamPlanner
+              assignments={assignments}
+              completedAssignments={completedAssignmentIds}
+              onExamsChange={handleExamsChange}
+            />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">

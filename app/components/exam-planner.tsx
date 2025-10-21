@@ -44,9 +44,10 @@ interface Exam {
 interface ExamPlannerProps {
   assignments: Assignment[]
   completedAssignments: Set<string>
+  onExamsChange?: (exams: Exam[]) => void
 }
 
-export function ExamPlanner({ assignments, completedAssignments }: ExamPlannerProps) {
+export function ExamPlanner({ assignments, completedAssignments, onExamsChange }: ExamPlannerProps) {
   const [exams, setExams] = useState<Exam[]>([])
   const [showAddExamDialog, setShowAddExamDialog] = useState(false)
   const [showPastDateDialog, setShowPastDateDialog] = useState(false)
@@ -78,10 +79,11 @@ export function ExamPlanner({ assignments, completedAssignments }: ExamPlannerPr
     }
   }, [])
 
-  // Save exams to localStorage
+  // Save exams to localStorage and call callback
   useEffect(() => {
     localStorage.setItem("medical-curriculum-exams", JSON.stringify(exams))
-  }, [exams])
+    onExamsChange?.(exams)
+  }, [exams, onExamsChange])
 
   const calculatePercentile = (grade: number) => {
     // Simple percentile calculation based on grade
